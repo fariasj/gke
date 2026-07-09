@@ -64,6 +64,8 @@ jobs:
     # 6. Desplegar en Kubernetes modificando la imagen dinámicamente
     - name: Deploy to GKE
       run: |
-        sed -i "s|image: gcr.io/google-samples/microservices-demo/frontend:.*|image: ${{ env.IMAGE_URI }}|g" ./kubernetes-manifests/frontend.yaml
-        
+        # 1. Aplicamos el manifiesto original
         kubectl apply -f ./kubernetes-manifests/frontend.yaml
+        
+        # 2. Forzamos la actualización de la imagen con la ruta correcta que acabamos de compilar
+        kubectl set image deployment/frontend server=${{ env.IMAGE_URI }}
