@@ -1,0 +1,69 @@
+name: Build and Deploy to GKE
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: "	certain-arcana-501920-r2"
+  WORKLOAD_PROVIDER: "projects/816744168915/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
+  SERVICE_ACCOUNT: "github-actions-sa@certain-arcana-501920-r2.iam.gserviceaccount.com"
+  CLUSTER_NAME: "mi-cluster-gke"
+  CLUSTER_REGION: "us-central1"
+  REPOSITORY_NAME: "microservices-repo"
+  IMAGE_NAME: "frontend"
+
+jobs:
+  deploy:
+    name: Build, Push and Deploy
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 1. Autenticación segura con GCP vía OIDC
+    - name: Authenticate to Google Cloud
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: ${{ env.WORKLOAD_PROVIDER }}
+        service_account: ${{ env.SERVICE_ACCOUNT }}
+
+    # 2. Configurar gcloud CLI
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    # 3. Autenticar Docker con Artifact Registry
+    - name: Configure Docker for GCP
+      run: |
+        gcloud auth configure-docker ${{ env.CLUSTER_REGION }}-docker.pkg.dev --quiet
+
+    # 4. Construir y Subir la imagen de Docker (Usamos el servicio frontend)
+    - name: Build and Push Docker Image
+      run: |
+        TAG=${{ github.sha }}
+        IMAGE_URI="${{ env.CLUSTER_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}:$TAG"
+        
+        docker build -t $IMAGE_URI ./src/frontend
+        docker push $IMAGE_URI
+        echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+
+    # 5. Obtener credenciales del clúster GKE
+    - name: Get GKE Credentials
+      uses: google-github-actions/get-gke-credentials@v2
+      with:
+        cluster_name: ${{ env.CLUSTER_NAME }}
+        location: ${{ env.CLUSTER_REGION }}
+
+    # 6. Desplegar en Kubernetes modificando la imagen dinámicamente
+    - name: Deploy to GKE
+      run: |
+        sed -i "s|image: gcr.io/google-samples/microservices-demo/frontend:.*|image: ${{ env.IMAGE_URI }}|g" ./kubernetes-manifests/frontend.yaml
+        
+        kubectl apply -f ./kubernetes-manifests/frontend.yaml
