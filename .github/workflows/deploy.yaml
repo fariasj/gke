@@ -47,11 +47,11 @@ jobs:
     # 4. Construir y Subir la imagen de Docker (Usamos el servicio frontend)
     - name: Build and Push Docker Image
       run: |
-        TAG=${{ github.sha }}
+        TAG="${{ github.sha }}"
         IMAGE_URI="${{ env.CLUSTER_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}:$TAG"
         
-        docker build -t $IMAGE_URI ./src/frontend
-        docker push $IMAGE_URI
+        docker build -t "$IMAGE_URI" "./src/frontend"
+        docker push "$IMAGE_URI"
         echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
     # 5. Obtener credenciales del clúster GKE
