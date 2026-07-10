@@ -10,7 +10,8 @@ env:
   WORKLOAD_PROVIDER: "projects/816744168915/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
   SERVICE_ACCOUNT: "github-actions-sa@certain-arcana-501920-r2.iam.gserviceaccount.com"
   CLUSTER_NAME: "mi-cluster-standard"
-  CLUSTER_REGION: "us-central1-a"
+  CLUSTER_ZONE: "us-central1-a"       # NUEVA: Específica para Kubernetes
+  REGISTRY_REGION: "us-central1"     # NUEVA: Específica para Artifact Registry
   REPOSITORY_NAME: "microservices-repo"
   IMAGE_NAME: "frontend"
 
@@ -42,24 +43,24 @@ jobs:
     # 3. Autenticar Docker con Artifact Registry
     - name: Configure Docker for GCP
       run: |
-        gcloud auth configure-docker ${{ env.CLUSTER_REGION }}-docker.pkg.dev --quiet
+        gcloud auth configure-docker ${{ env.REGISTRY_REGION }}-docker.pkg.dev --quiet
 
     # 4. Construir y Subir la imagen de Docker (Usamos el servicio frontend)
     - name: Build and Push Docker Image
       run: |
         TAG="${{ github.sha }}"
-        IMAGE_URI="${{ env.CLUSTER_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}:$TAG"
+        IMAGE_URI="${{ env.REGISTRY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY_NAME }}/${{ env.IMAGE_NAME }}:$TAG"
         
         docker build -t "$IMAGE_URI" "./src/frontend"
         docker push "$IMAGE_URI"
         echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
-    # 5. Obtener credenciales del clúster GKE
+    # 5. Obtener credenciales del clúster GKE Zonal
     - name: Get GKE Credentials
       uses: google-github-actions/get-gke-credentials@v2
       with:
         cluster_name: ${{ env.CLUSTER_NAME }}
-        location: ${{ env.CLUSTER_REGION }}
+        location: ${{ env.CLUSTER_ZONE }} # Aquí pasamos la zona 'us-central1-a'
 
     # 6. Desplegar en Kubernetes modificando la imagen dinámicamente
     - name: Deploy to GKE
