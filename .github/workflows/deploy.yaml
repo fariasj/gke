@@ -9,8 +9,8 @@ env:
   PROJECT_ID: "certain-arcana-501920-r2"
   WORKLOAD_PROVIDER: "projects/816744168915/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
   SERVICE_ACCOUNT: "github-actions-sa@certain-arcana-501920-r2.iam.gserviceaccount.com"
-  CLUSTER_NAME: "mi-cluster-gke"
-  CLUSTER_REGION: "us-central1"
+  CLUSTER_NAME: "mi-cluster-standard"
+  CLUSTER_REGION: "us-central1-a"
   REPOSITORY_NAME: "microservices-repo"
   IMAGE_NAME: "frontend"
 
